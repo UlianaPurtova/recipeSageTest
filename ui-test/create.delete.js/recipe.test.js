@@ -1,6 +1,3 @@
-// import { test, expect } from "@playwright/test";
-// import { getTrpcClient } from "./../util/trpc";
-// import { getAuthToken } from "./../util/auth";
 const { test, expect } = require("@playwright/test");
 const { getTrpcClient } = require("../util/trpc");
 const { getAuthToken } = require("../util/auth");
@@ -44,7 +41,6 @@ test.describe("Create", () => {
       .click({ force: true });
 
     await page.waitForLoadState("networkidle");
-    // await page.fill('input[type="title"]', "Lobster stew");
     await page
       .locator('label div:has-text("Title") + div input')
       .fill("Lobster stew");
@@ -92,7 +88,11 @@ test.describe("Create", () => {
 
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button", { name: "Autofill recipe from..." }).click();
+    const autofillButton = page.getByRole("button", { name: "Autofill recipe from..." });
+    await expect(autofillButton).toBeVisible();
+    await expect(autofillButton).toBeEnabled();
+    await autofillButton.click();
+
     await page.waitForLoadState("networkidle");
     await page
       .getByRole("button", { name: "Autofill from URL" })
@@ -103,10 +103,17 @@ test.describe("Create", () => {
       "https://www.bbc.co.uk/food/apple"
     );
 
-    await page.getByRole("button", { name: "Okay" }).click({ force: true });
+    const okayButton = await page.getByRole("button", { name: "Okay" });
+    await expect(okayButton).toBeVisible();
+    await okayButton.click({ force: true });
     await page.waitForLoadState("networkidle");
     await new Promise((resolve) => setTimeout(resolve, 10000));
-    await page.getByRole("button", { name: "Create" }).click();
+    await page.mouse.click(100, 500); // page renders badly in PR, this helps
+    await page.evaluate(() => {
+      window.scrollTo(0, document.body.scrollHeight);
+    });
+
+    await page.getByRole("button", { name: "Create" }).click({ force: true });
     const recipeTitle = await page.getByRole("heading", {
       name: "Apple Recipes",
     });
@@ -133,9 +140,10 @@ test.describe("Create", () => {
 
     await page.getByRole("button", { name: "Autofill recipe from..." }).click();
     await page.waitForLoadState("networkidle");
-    await page
-      .getByRole("button", { name: "Autofill from text" })
-      .click({ force: true });
+    const autofillButton = page.getByRole("button", { name: "Autofill from text" });
+    await expect(autofillButton).toBeVisible();
+    await expect(autofillButton).toBeEnabled();
+    await autofillButton.click();
     await page.waitForLoadState("networkidle");
     await page
       .locator("div")
@@ -153,7 +161,8 @@ test.describe("Create", () => {
       );
     await page.getByRole("button", { name: "Okay" }).click({ force: true });
     await page.waitForLoadState("networkidle");
-    await new Promise((resolve) => setTimeout(resolve, 20000));
+    // await new Promise((resolve) => setTimeout(resolve, 20000));
+    await page.getByRole("button", { name: "Create" }).waitFor({ state: "visible" });
     await page.getByRole("button", { name: "Create" }).click();
     const recipeTitle = await page.getByRole("heading", {
       name: "Cauliflower Cheese",
@@ -161,7 +170,7 @@ test.describe("Create", () => {
     await expect(recipeTitle).toBeVisible();
   });
 
-  test.only("test remove recipes api", async ({ page }) => {
+  test("test remove recipes api", async ({ page }) => {
     // SETUP
     const token = await getAuthToken(
       "upurtova2@gmail.com",
